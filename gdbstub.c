@@ -289,7 +289,7 @@ static void ATTR_GDBFN sendReason() {
 #endif
 	//exception-to-signal mapping
 	char exceptionSignal[]={4,31,11,11,2,6,8,0,6,7,0,0,7,7,7,7};
-	int i=0;
+	unsigned int i=0;
 	gdbPacketStart();
 	gdbPacketChar('T');
 	if (gdbstub_savedRegs.reason==0xff) {
@@ -297,7 +297,12 @@ static void ATTR_GDBFN sendReason() {
 	} else if (gdbstub_savedRegs.reason&0x80) {
 		//We stopped because of an exception. Convert exception code to a signal number and send it.
 		i=gdbstub_savedRegs.reason&0x7f;
-		if (i<sizeof(exceptionSignal)) return gdbPacketHex(exceptionSignal[i], 8); else gdbPacketHex(11, 8);
+		if (i<sizeof(exceptionSignal)) {
+			gdbPacketHex(exceptionSignal[i], 8);
+			return;
+		} else {
+			gdbPacketHex(11, 8);
+		}
 	} else {
 		//We stopped because of a debugging exception.
 		gdbPacketHex(5, 8); //sigtrap
@@ -318,7 +323,7 @@ static void ATTR_GDBFN sendReason() {
 }
 
 //Handle a command as received from GDB.
-static int ATTR_GDBFN gdbHandleCommand(unsigned char *cmd, int len) {
+static int ATTR_GDBFN gdbHandleCommand(unsigned char *cmd, __attribute__((unused)) int len) {
 	//Handle a command
 	int i, j, k;
 	unsigned char *data=cmd+1;
@@ -642,7 +647,7 @@ static void ATTR_GDBFN gdb_semihost_putchar1(char c) {
 //The OS-less SDK uses the Xtensa HAL to handle exceptions. We can use those functions to catch any 
 //fatal exceptions and invoke the debugger when this happens.
 static void ATTR_GDBINIT install_exceptions() {
-	int i;
+	unsigned int i;
 	int exno[]={EXCCAUSE_ILLEGAL, EXCCAUSE_SYSCALL, EXCCAUSE_INSTR_ERROR, EXCCAUSE_LOAD_STORE_ERROR,
 			EXCCAUSE_DIVIDE_BY_ZERO, EXCCAUSE_UNALIGNED, EXCCAUSE_INSTR_DATA_ERROR, EXCCAUSE_LOAD_STORE_DATA_ERROR, 
 			EXCCAUSE_INSTR_ADDR_ERROR, EXCCAUSE_LOAD_STORE_ADDR_ERROR, EXCCAUSE_INSTR_PROHIBITED,
@@ -672,7 +677,7 @@ static void ATTR_GDBINIT install_exceptions() {
 
 #if !GDBSTUB_FREERTOS
 
-static void ATTR_GDBFN uart_hdlr(void *arg, void *frame) {
+static void ATTR_GDBFN uart_hdlr(__attribute__((unused)) void *arg, void *frame) {
 	int doDebug=0, fifolen=0;
 	//Save the extra registers the Xtensa HAL doesn't save
 	gdbstub_save_extra_sfrs_for_exception();
